@@ -179,6 +179,7 @@ def main():
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),  # Log to stdout
+         
             logging.FileHandler('training.log')  # Log to file
         ]
     )
@@ -193,7 +194,7 @@ def main():
         batch_size=32,
         num_workers=4,
         task='all',
-        resize=224
+        resize=32
     )
     
     # Get number of classes for each task
@@ -207,7 +208,7 @@ def main():
         n_classes_task1=n_classes_age,
         n_classes_task2=n_classes_gender,
         n_classes_task3=n_classes_disease,
-        input_size=224,
+        input_size=32,
         use_attention=True
     ).to(device)
     
@@ -216,7 +217,7 @@ def main():
     criterion = CrossEntropyLoss()
     
     # Training loop
-    num_epochs = 10
+    num_epochs = 20
     best_val_loss = float('inf')
     
     for epoch in range(num_epochs):
