@@ -1,10 +1,3 @@
-'''
- -*- coding: utf-8 -*-
- @Author: Ang Jian Hwee <angjianhwee@gmail.com>
- @Date:   2025-05-06 18:25:22
- @Last Modified by:   Ang Jian Hwee <angjianhwee@gmail.com>
- @Last Modified time: 2025-05-06 18:25:27
-'''
 import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -12,18 +5,19 @@ from PIL import Image
 import os
 import torchvision.transforms as transforms
 
-def get_face_dataloaders(data_dir='./data/face', batch_size=64, num_workers=4, task='gender', resize=224):
+def get_face_dataloaders(data_dir='./data/face', batch_size=64, num_workers=4, task='all', resize=224):
     """
-    Load face dataset from CSV for a specific task.
+    Load face dataset from CSV for multiple tasks.
     
     Args:
         data_dir (str): Directory containing images and CSV.
         batch_size (int): Batch size for DataLoaders.
         num_workers (int): Number of workers for DataLoader.
-        task (str): Task to train on ('gender', 'age_10', 'age_5', 'disease').
+        task (str): Task to train on ('all', 'gender', 'age_10', 'age_5', 'disease').
+        resize (int): Size to resize images to.
     
     Returns:
-        tuple: (train_loader, val_loader, test_loader)
+        tuple: (train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, df)
     """
     # Load CSV and split (assuming no explicit val split, we'll create one)
     csv_path = os.path.join(data_dir, 'face_images_path_with_meta_jpg_exist_only.csv')
@@ -82,32 +76,38 @@ def get_face_dataloaders(data_dir='./data/face', batch_size=64, num_workers=4, t
     class CustomDataset(Dataset):
         def __init__(self, dataframe, task, image_folder, transform=None):
             self.dataframe = dataframe
-            self.task = task
             self.transform = transform
             self.image_folder = image_folder
             
-            valid_tasks = ['gender', 'age_10', 'age_5', 'disease']
-            if task not in valid_tasks:
-                raise ValueError(f"Task must be one of {valid_tasks}, got {task}")
-
-            if self.task == 'gender':
-                self.label_col = 'gender'
-            elif self.task == 'age_10':
-                self.label_col = 'age_div_10_round'
-            elif self.task == 'age_5':
-                self.label_col = 'age_div_5_round'
-            elif self.task == 'disease':
-                self.label_col = 'disease'
+            # Initialize label mappings for all tasks
+            self.label_mappings = {}
             
-            unique_labels = sorted(self.dataframe[self.label_col].unique())
-            self.label_to_idx = {label: idx for idx, label in enumerate(unique_labels)}
-            print(f"Task: {self.task}, Number of classes: {len(self.label_to_idx)}")
+            # Gender labels
+            gender_labels = sorted(self.dataframe['gender'].unique())
+            self.label_mappings['gender'] = {label: idx for idx, label in enumerate(gender_labels)}
+            
+            # Age labels (both 5 and 10 year divisions)
+            age_10_labels = sorted(self.dataframe['age_div_10_round'].unique())
+            self.label_mappings['age_10'] = {label: idx for idx, label in enumerate(age_10_labels)}
+            
+            age_5_labels = sorted(self.dataframe['age_div_5_round'].unique())
+            self.label_mappings['age_5'] = {label: idx for idx, label in enumerate(age_5_labels)}
+            
+            # Disease labels
+            disease_labels = sorted(self.dataframe['disease'].unique())
+            self.label_mappings['disease'] = {label: idx for idx, label in enumerate(disease_labels)}
+            
+            print(f"Number of classes - Gender: {len(self.label_mappings['gender'])}, "
+                  f"Age (10): {len(self.label_mappings['age_10'])}, "
+                  f"Age (5): {len(self.label_mappings['age_5'])}, "
+                  f"Disease: {len(self.label_mappings['disease'])}")
 
         def __len__(self):
             return len(self.dataframe)
 
         def __getitem__(self, idx):
-            img_filename = self.dataframe.iloc[idx]['dest_filename']
+            row = self.dataframe.iloc[idx]
+            img_filename = row['dest_filename']
             img_path = os.path.join(self.image_folder, img_filename)
             if not os.path.exists(img_path):
                 raise FileNotFoundError(f"Image not found at: {img_path}")
@@ -116,8 +116,21 @@ def get_face_dataloaders(data_dir='./data/face', batch_size=64, num_workers=4, t
             if self.transform:
                 image = self.transform(image)
             
-            label = self.label_to_idx[self.dataframe.iloc[idx][self.label_col]]
-            return image, label
+            # Get all labels
+            labels = {
+                'gender': self.label_mappings['gender'][row['gender']],
+                'age_10': self.label_mappings['age_10'][row['age_div_10_round']],
+                'age_5': self.label_mappings['age_5'][row['age_div_5_round']],
+                'disease': self.label_mappings['disease'][row['disease']]
+            }
+            
+            # Add metadata
+            metadata = {
+                'filename': img_filename,
+                'subject': row['subject']
+            }
+            
+            return image, labels, metadata
 
     # Create datasets
     train_dataset = CustomDataset(train_df, task, data_dir, train_transform)
@@ -128,9 +141,9 @@ def get_face_dataloaders(data_dir='./data/face', batch_size=64, num_workers=4, t
     print(f"Validation dataset size: {len(val_dataset)}, transform: {train_transform}")
     print(f"Test dataset size: {len(test_dataset)}, transform: {test_transform}")
     
-    print(f"Train dataset label mapping: {train_dataset.label_to_idx}")
-    print(f"Validation dataset label mapping: {val_dataset.label_to_idx}")
-    print(f"Test dataset label mapping: {test_dataset.label_to_idx}")
+    print(f"Train dataset label mapping: {train_dataset.label_mappings}")
+    print(f"Validation dataset label mapping: {val_dataset.label_mappings}")
+    print(f"Test dataset label mapping: {test_dataset.label_mappings}")
 
     # Create DataLoaders
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
@@ -139,14 +152,26 @@ def get_face_dataloaders(data_dir='./data/face', batch_size=64, num_workers=4, t
 
     # try iter one batch and print size
     try:
-        for images, labels in train_loader:
-            print(f"Train batch size: {images.size()}, Labels: {labels.size()}")
+        for images, labels, metadata in train_loader:
+            print(f"Train batch size: {images.size()}")
+            print("Labels shape:")
+            for task, label in labels.items():
+                print(f"{task}: {label.size()}")
+            print("Metadata sample:", {k: v[0] for k, v in metadata.items()})
             break
-        for images, labels in val_loader:
-            print(f"Validation batch size: {images.size()}, Labels: {labels.size()}")
+        for images, labels, metadata in val_loader:
+            print(f"Validation batch size: {images.size()}")
+            print("Labels shape:")
+            for task, label in labels.items():
+                print(f"{task}: {label.size()}")
+            print("Metadata sample:", {k: v[0] for k, v in metadata.items()})
             break
-        for images, labels in test_loader:
-            print(f"Test batch size: {images.size()}, Labels: {labels.size()}")
+        for images, labels, metadata in test_loader:
+            print(f"Test batch size: {images.size()}")
+            print("Labels shape:")
+            for task, label in labels.items():
+                print(f"{task}: {label.size()}")
+            print("Metadata sample:", {k: v[0] for k, v in metadata.items()})
             break
     except Exception as e:
         print(f"Error during DataLoader iteration: {e}")
