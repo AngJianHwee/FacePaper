@@ -18,7 +18,7 @@ def get_unique_suffix():
     unique_id = str(uuid.uuid4())[:8]  # Get first 8 characters of UUID
     return f"{timestamp}_{unique_id}"
 
-def train_epoch(model, train_loader, optimizer, criterion, device):
+def train_epoch(model, train_loader, optimizer, criterion, device, current_epoch, total_epochs):
     model.train()
     total_loss = 0
     total_loss_age = 0
@@ -83,14 +83,14 @@ def train_epoch(model, train_loader, optimizer, criterion, device):
     }
     
     # Print loss magnitudes and percentages
-    logging.info(f"\nLoss magnitudes:")
-    logging.info(f"Age loss: {avg_loss_age:.4f} ({loss_percentages['age_5']:.1f}%)")
-    logging.info(f"Gender loss: {avg_loss_gender:.4f} ({loss_percentages['gender']:.1f}%)")
-    logging.info(f"Disease loss: {avg_loss_disease:.4f} ({loss_percentages['disease']:.1f}%)")
+    logging.info(f"\n[{current_epoch}/{total_epochs}] Loss magnitudes:")
+    logging.info(f"[{current_epoch}/{total_epochs}] Age loss: {avg_loss_age:.4f} ({loss_percentages['age_5']:.1f}%)")
+    logging.info(f"[{current_epoch}/{total_epochs}] Gender loss: {avg_loss_gender:.4f} ({loss_percentages['gender']:.1f}%)")
+    logging.info(f"[{current_epoch}/{total_epochs}] Disease loss: {avg_loss_disease:.4f} ({loss_percentages['disease']:.1f}%)")
     
     return avg_loss, accuracy
 
-def validate(model, val_loader, criterion, device):
+def validate(model, val_loader, criterion, device, current_epoch, total_epochs):
     model.eval()
     total_loss = 0
     total_loss_age = 0
@@ -152,14 +152,14 @@ def validate(model, val_loader, criterion, device):
     }
     
     # Print loss magnitudes and percentages
-    logging.info(f"\nValidation loss magnitudes:")
-    logging.info(f"Age loss: {avg_loss_age:.4f} ({loss_percentages['age_5']:.1f}%)")
-    logging.info(f"Gender loss: {avg_loss_gender:.4f} ({loss_percentages['gender']:.1f}%)")
-    logging.info(f"Disease loss: {avg_loss_disease:.4f} ({loss_percentages['disease']:.1f}%)")
+    logging.info(f"\n[{current_epoch}/{total_epochs}] Validation loss magnitudes:")
+    logging.info(f"[{current_epoch}/{total_epochs}] Age loss: {avg_loss_age:.4f} ({loss_percentages['age_5']:.1f}%)")
+    logging.info(f"[{current_epoch}/{total_epochs}] Gender loss: {avg_loss_gender:.4f} ({loss_percentages['gender']:.1f}%)")
+    logging.info(f"[{current_epoch}/{total_epochs}] Disease loss: {avg_loss_disease:.4f} ({loss_percentages['disease']:.1f}%)")
     
     return avg_loss, accuracy
 
-def test(model, test_loader, criterion, device):
+def test(model, test_loader, criterion, device, current_epoch=None, total_epochs=None):
     model.eval()
     total_loss = 0
     total_loss_age = 0
@@ -234,10 +234,11 @@ def test(model, test_loader, criterion, device):
     }
     
     # Print loss magnitudes and percentages
-    logging.info(f"\nTest loss magnitudes:")
-    logging.info(f"Age loss: {avg_loss_age:.4f} ({loss_percentages['age_5']:.1f}%)")
-    logging.info(f"Gender loss: {avg_loss_gender:.4f} ({loss_percentages['gender']:.1f}%)")
-    logging.info(f"Disease loss: {avg_loss_disease:.4f} ({loss_percentages['disease']:.1f}%)")
+    prefix = f"[{current_epoch}/{total_epochs}]" if current_epoch is not None else ""
+    logging.info(f"\n{prefix} Test loss magnitudes:")
+    logging.info(f"{prefix} Age loss: {avg_loss_age:.4f} ({loss_percentages['age_5']:.1f}%)")
+    logging.info(f"{prefix} Gender loss: {avg_loss_gender:.4f} ({loss_percentages['gender']:.1f}%)")
+    logging.info(f"{prefix} Disease loss: {avg_loss_disease:.4f} ({loss_percentages['disease']:.1f}%)")
     
     # Calculate confusion matrices
     confusion_matrices = {}
@@ -306,45 +307,45 @@ def main():
     
     print(f"\nStarting training for {num_epochs} epochs...")
     
-    for epoch in range(num_epochs):
+    for epoch, i in enumerate(range(1, num_epochs + 1), 1):
         start_time = time.time()
         
         # Train
-        train_loss, train_acc = train_epoch(model, train_loader, optimizer, criterion, device)
+        train_loss, train_acc = train_epoch(model, train_loader, optimizer, criterion, device, i, num_epochs)
         
         # Validate
-        val_loss, val_acc = validate(model, val_loader, criterion, device)
+        val_loss, val_acc = validate(model, val_loader, criterion, device, i, num_epochs)
         
         # Test after each epoch
-        test_loss, test_acc, _ = test(model, test_loader, criterion, device)
+        test_loss, test_acc, _ = test(model, test_loader, criterion, device, i, num_epochs)
         
         # Print epoch results
         epoch_time = time.time() - start_time
-        print(f'\nEpoch {epoch+1}/{num_epochs} - {epoch_time:.2f}s')
-        print(f'Train Loss: {train_loss:.4f}, Train Acc - Age: {train_acc["age_5"]:.2f}%, Gender: {train_acc["gender"]:.2f}%, Disease: {train_acc["disease"]:.2f}%')
-        print(f'Val Loss: {val_loss:.4f}, Val Acc - Age: {val_acc["age_5"]:.2f}%, Gender: {val_acc["gender"]:.2f}%, Disease: {val_acc["disease"]:.2f}%')
-        print(f'Test Loss: {test_loss:.4f}, Test Acc - Age: {test_acc["age_5"]:.2f}%, Gender: {test_acc["gender"]:.2f}%, Disease: {test_acc["disease"]:.2f}%')
+        print(f'\n[{i}/{num_epochs}] Epoch completed in {epoch_time:.2f}s')
+        print(f'[{i}/{num_epochs}] Train Loss: {train_loss:.4f}, Train Acc - Age: {train_acc["age_5"]:.2f}%, Gender: {train_acc["gender"]:.2f}%, Disease: {train_acc["disease"]:.2f}%')
+        print(f'[{i}/{num_epochs}] Val Loss: {val_loss:.4f}, Val Acc - Age: {val_acc["age_5"]:.2f}%, Gender: {val_acc["gender"]:.2f}%, Disease: {val_acc["disease"]:.2f}%')
+        print(f'[{i}/{num_epochs}] Test Loss: {test_loss:.4f}, Test Acc - Age: {test_acc["age_5"]:.2f}%, Gender: {test_acc["gender"]:.2f}%, Disease: {test_acc["disease"]:.2f}%')
         
-        logging.info(f'Epoch {epoch+1}/{num_epochs} - {epoch_time:.2f}s')
-        logging.info(f'Train Loss: {train_loss:.4f}, Train Acc - Age: {train_acc["age_5"]:.2f}%, Gender: {train_acc["gender"]:.2f}%, Disease: {train_acc["disease"]:.2f}%')
-        logging.info(f'Val Loss: {val_loss:.4f}, Val Acc - Age: {val_acc["age_5"]:.2f}%, Gender: {val_acc["gender"]:.2f}%, Disease: {val_acc["disease"]:.2f}%')
-        logging.info(f'Test Loss: {test_loss:.4f}, Test Acc - Age: {test_acc["age_5"]:.2f}%, Gender: {test_acc["gender"]:.2f}%, Disease: {test_acc["disease"]:.2f}%')
+        logging.info(f'[{i}/{num_epochs}] Epoch completed in {epoch_time:.2f}s')
+        logging.info(f'[{i}/{num_epochs}] Train Loss: {train_loss:.4f}, Train Acc - Age: {train_acc["age_5"]:.2f}%, Gender: {train_acc["gender"]:.2f}%, Disease: {train_acc["disease"]:.2f}%')
+        logging.info(f'[{i}/{num_epochs}] Val Loss: {val_loss:.4f}, Val Acc - Age: {val_acc["age_5"]:.2f}%, Gender: {val_acc["gender"]:.2f}%, Disease: {val_acc["disease"]:.2f}%')
+        logging.info(f'[{i}/{num_epochs}] Test Loss: {test_loss:.4f}, Test Acc - Age: {test_acc["age_5"]:.2f}%, Gender: {test_acc["gender"]:.2f}%, Disease: {test_acc["disease"]:.2f}%')
         
         # Save best model based on validation loss
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             val_model_path = f'best_model_val_{run_suffix}.pth'
             torch.save(model.state_dict(), val_model_path)
-            print(f'Saved best validation model to {val_model_path}')
-            logging.info(f'Saved best validation model to {val_model_path}')
+            print(f'[{i}/{num_epochs}] Saved best validation model to {val_model_path}')
+            logging.info(f'[{i}/{num_epochs}] Saved best validation model to {val_model_path}')
         
         # Save best model based on test loss
         if test_loss < best_test_loss:
             best_test_loss = test_loss
             test_model_path = f'best_model_test_{run_suffix}.pth'
             torch.save(model.state_dict(), test_model_path)
-            print(f'Saved best test model to {test_model_path}')
-            logging.info(f'Saved best test model to {test_model_path}')
+            print(f'[{i}/{num_epochs}] Saved best test model to {test_model_path}')
+            logging.info(f'[{i}/{num_epochs}] Saved best test model to {test_model_path}')
     
     print("\nTraining completed. Testing both best models...")
     
