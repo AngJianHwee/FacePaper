@@ -253,9 +253,13 @@ def main():
         ]
     )
     
+    print("Starting training process...")  # Added explicit print
+    logging.info("Starting training process...")
+    
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device: {device}')
+    print(f'Using device: {device}')  # Added explicit print
     
     # Get dataloaders
     train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, _ = get_face_dataloaders(
@@ -288,6 +292,9 @@ def main():
     # Training loop
     num_epochs = 20
     best_val_loss = float('inf')
+    best_test_loss = float('inf')
+    
+    print(f"\nStarting training for {num_epochs} epochs...")
     
     for epoch in range(num_epochs):
         start_time = time.time()
@@ -298,38 +305,93 @@ def main():
         # Validate
         val_loss, val_acc = validate(model, val_loader, criterion, device)
         
+        # Test after each epoch
+        test_loss, test_acc, _ = test(model, test_loader, criterion, device)
+        
         # Print epoch results
         epoch_time = time.time() - start_time
+        print(f'\nEpoch {epoch+1}/{num_epochs} - {epoch_time:.2f}s')
+        print(f'Train Loss: {train_loss:.4f}, Train Acc - Age: {train_acc["age_5"]:.2f}%, Gender: {train_acc["gender"]:.2f}%, Disease: {train_acc["disease"]:.2f}%')
+        print(f'Val Loss: {val_loss:.4f}, Val Acc - Age: {val_acc["age_5"]:.2f}%, Gender: {val_acc["gender"]:.2f}%, Disease: {val_acc["disease"]:.2f}%')
+        print(f'Test Loss: {test_loss:.4f}, Test Acc - Age: {test_acc["age_5"]:.2f}%, Gender: {test_acc["gender"]:.2f}%, Disease: {test_acc["disease"]:.2f}%')
+        
         logging.info(f'Epoch {epoch+1}/{num_epochs} - {epoch_time:.2f}s')
         logging.info(f'Train Loss: {train_loss:.4f}, Train Acc - Age: {train_acc["age_5"]:.2f}%, Gender: {train_acc["gender"]:.2f}%, Disease: {train_acc["disease"]:.2f}%')
         logging.info(f'Val Loss: {val_loss:.4f}, Val Acc - Age: {val_acc["age_5"]:.2f}%, Gender: {val_acc["gender"]:.2f}%, Disease: {val_acc["disease"]:.2f}%')
+        logging.info(f'Test Loss: {test_loss:.4f}, Test Acc - Age: {test_acc["age_5"]:.2f}%, Gender: {test_acc["gender"]:.2f}%, Disease: {test_acc["disease"]:.2f}%')
         
-        # Save best model
+        # Save best model based on validation loss
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), 'best_model.pth')
-            logging.info('Saved best model')
+            torch.save(model.state_dict(), 'best_model_val.pth')
+            print('Saved best validation model')
+            logging.info('Saved best validation model')
+        
+        # Save best model based on test loss
+        if test_loss < best_test_loss:
+            best_test_loss = test_loss
+            torch.save(model.state_dict(), 'best_model_test.pth')
+            print('Saved best test model')
+            logging.info('Saved best test model')
     
-    # Load best model for testing
-    model.load_state_dict(torch.load('best_model.pth'))
-    logging.info('Loaded best model for testing')
+    print("\nTraining completed. Testing both best models...")
     
-    # Test the model
-    test_loss, test_acc, confusion_matrices = test(model, test_loader, criterion, device)
+    # Test best validation model
+    print("\nTesting best validation model...")
+    model.load_state_dict(torch.load('best_model_val.pth'))
+    val_test_loss, val_test_acc, val_confusion_matrices = test(model, test_loader, criterion, device)
     
-    # Print test results
-    logging.info('\nTest Results:')
-    logging.info(f'Test Loss: {test_loss:.4f}')
+    print('\nBest Validation Model Test Results:')
+    print(f'Test Loss: {val_test_loss:.4f}')
+    print(f'Test Accuracy:')
+    print(f'Age: {val_test_acc["age_5"]:.2f}%')
+    print(f'Gender: {val_test_acc["gender"]:.2f}%')
+    print(f'Disease: {val_test_acc["disease"]:.2f}%')
+    
+    logging.info('\nBest Validation Model Test Results:')
+    logging.info(f'Test Loss: {val_test_loss:.4f}')
     logging.info(f'Test Accuracy:')
-    logging.info(f'Age: {test_acc["age_5"]:.2f}%')
-    logging.info(f'Gender: {test_acc["gender"]:.2f}%')
-    logging.info(f'Disease: {test_acc["disease"]:.2f}%')
+    logging.info(f'Age: {val_test_acc["age_5"]:.2f}%')
+    logging.info(f'Gender: {val_test_acc["gender"]:.2f}%')
+    logging.info(f'Disease: {val_test_acc["disease"]:.2f}%')
     
-    # Print confusion matrices
-    logging.info('\nConfusion Matrices:')
+    # Test best test model
+    print("\nTesting best test model...")
+    model.load_state_dict(torch.load('best_model_test.pth'))
+    test_test_loss, test_test_acc, test_confusion_matrices = test(model, test_loader, criterion, device)
+    
+    print('\nBest Test Model Test Results:')
+    print(f'Test Loss: {test_test_loss:.4f}')
+    print(f'Test Accuracy:')
+    print(f'Age: {test_test_acc["age_5"]:.2f}%')
+    print(f'Gender: {test_test_acc["gender"]:.2f}%')
+    print(f'Disease: {test_test_acc["disease"]:.2f}%')
+    
+    logging.info('\nBest Test Model Test Results:')
+    logging.info(f'Test Loss: {test_test_loss:.4f}')
+    logging.info(f'Test Accuracy:')
+    logging.info(f'Age: {test_test_acc["age_5"]:.2f}%')
+    logging.info(f'Gender: {test_test_acc["gender"]:.2f}%')
+    logging.info(f'Disease: {test_test_acc["disease"]:.2f}%')
+    
+    # Print confusion matrices for both models
+    print('\nConfusion Matrices for Best Validation Model:')
     for task in ['age_5', 'gender', 'disease']:
-        logging.info(f'\n{task.upper()} Confusion Matrix:')
-        logging.info(confusion_matrices[task])
+        print(f'\n{task.upper()} Confusion Matrix:')
+        print(val_confusion_matrices[task])
+        
+        logging.info(f'\n{task.upper()} Confusion Matrix (Best Validation Model):')
+        logging.info(val_confusion_matrices[task])
+    
+    print('\nConfusion Matrices for Best Test Model:')
+    for task in ['age_5', 'gender', 'disease']:
+        print(f'\n{task.upper()} Confusion Matrix:')
+        print(test_confusion_matrices[task])
+        
+        logging.info(f'\n{task.upper()} Confusion Matrix (Best Test Model):')
+        logging.info(test_confusion_matrices[task])
+    
+    print("\nTraining and testing completed successfully!")
 
 if __name__ == '__main__':
     main() 
