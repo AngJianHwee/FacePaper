@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class AttentionMobileNetShallow_s(nn.Module):
+class AttentionMobileNetShallow_s_three_task(nn.Module):
     def __init__(self, input_channels, n_classes_task1, n_classes_task2, n_classes_task3, input_size=224, use_attention=False, attention_channels=64):
-        super(AttentionMobileNetShallow_s, self).__init__()
+        super(AttentionMobileNetShallow_s_three_task, self).__init__()
         self.input_channels = input_channels
         self.n_classes_task1 = n_classes_task1
         self.n_classes_task2 = n_classes_task2
