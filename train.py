@@ -13,6 +13,9 @@ from sklearn.metrics import confusion_matrix
 def train_epoch(model, train_loader, optimizer, criterion, device):
     model.train()
     total_loss = 0
+    total_loss_age = 0
+    total_loss_gender = 0 
+    total_loss_disease = 0
     correct = {'age_5': 0, 'gender': 0, 'disease': 0}
     total = {'age_5': 0, 'gender': 0, 'disease': 0}
     
@@ -35,6 +38,9 @@ def train_epoch(model, train_loader, optimizer, criterion, device):
         optimizer.step()
         
         total_loss += loss.item()
+        total_loss_age += loss_age.item()
+        total_loss_gender += loss_gender.item()
+        total_loss_disease += loss_disease.item()
         
         # Calculate accuracy for each task
         _, predicted_age = outputs[0].max(1)
@@ -51,17 +57,37 @@ def train_epoch(model, train_loader, optimizer, criterion, device):
     
     # Calculate average loss and accuracy
     avg_loss = total_loss / len(train_loader)
+    avg_loss_age = total_loss_age / len(train_loader)
+    avg_loss_gender = total_loss_gender / len(train_loader)
+    avg_loss_disease = total_loss_disease / len(train_loader)
+    
+    # Calculate loss percentages
+    loss_percentages = {
+        'age_5': (avg_loss_age / avg_loss) * 100,
+        'gender': (avg_loss_gender / avg_loss) * 100,
+        'disease': (avg_loss_disease / avg_loss) * 100
+    }
+    
     accuracy = {
         'age_5': 100. * correct['age_5'] / total['age_5'],
         'gender': 100. * correct['gender'] / total['gender'],
         'disease': 100. * correct['disease'] / total['disease']
     }
     
+    # Print loss magnitudes and percentages
+    logging.info(f"\nLoss magnitudes:")
+    logging.info(f"Age loss: {avg_loss_age:.4f} ({loss_percentages['age_5']:.1f}%)")
+    logging.info(f"Gender loss: {avg_loss_gender:.4f} ({loss_percentages['gender']:.1f}%)")
+    logging.info(f"Disease loss: {avg_loss_disease:.4f} ({loss_percentages['disease']:.1f}%)")
+    
     return avg_loss, accuracy
 
 def validate(model, val_loader, criterion, device):
     model.eval()
     total_loss = 0
+    total_loss_age = 0
+    total_loss_gender = 0
+    total_loss_disease = 0
     correct = {'age_5': 0, 'gender': 0, 'disease': 0}
     total = {'age_5': 0, 'gender': 0, 'disease': 0}
     
@@ -81,6 +107,9 @@ def validate(model, val_loader, criterion, device):
             loss = loss_age + loss_gender + loss_disease
             
             total_loss += loss.item()
+            total_loss_age += loss_age.item()
+            total_loss_gender += loss_gender.item()
+            total_loss_disease += loss_disease.item()
             
             # Calculate accuracy for each task
             _, predicted_age = outputs[0].max(1)
@@ -97,17 +126,37 @@ def validate(model, val_loader, criterion, device):
     
     # Calculate average loss and accuracy
     avg_loss = total_loss / len(val_loader)
+    avg_loss_age = total_loss_age / len(val_loader)
+    avg_loss_gender = total_loss_gender / len(val_loader)
+    avg_loss_disease = total_loss_disease / len(val_loader)
+    
+    # Calculate loss percentages
+    loss_percentages = {
+        'age_5': (avg_loss_age / avg_loss) * 100,
+        'gender': (avg_loss_gender / avg_loss) * 100,
+        'disease': (avg_loss_disease / avg_loss) * 100
+    }
+    
     accuracy = {
         'age_5': 100. * correct['age_5'] / total['age_5'],
         'gender': 100. * correct['gender'] / total['gender'],
         'disease': 100. * correct['disease'] / total['disease']
     }
     
+    # Print loss magnitudes and percentages
+    logging.info(f"\nValidation loss magnitudes:")
+    logging.info(f"Age loss: {avg_loss_age:.4f} ({loss_percentages['age_5']:.1f}%)")
+    logging.info(f"Gender loss: {avg_loss_gender:.4f} ({loss_percentages['gender']:.1f}%)")
+    logging.info(f"Disease loss: {avg_loss_disease:.4f} ({loss_percentages['disease']:.1f}%)")
+    
     return avg_loss, accuracy
 
 def test(model, test_loader, criterion, device):
     model.eval()
     total_loss = 0
+    total_loss_age = 0
+    total_loss_gender = 0
+    total_loss_disease = 0
     correct = {'age_5': 0, 'gender': 0, 'disease': 0}
     total = {'age_5': 0, 'gender': 0, 'disease': 0}
     
@@ -131,6 +180,9 @@ def test(model, test_loader, criterion, device):
             loss = loss_age + loss_gender + loss_disease
             
             total_loss += loss.item()
+            total_loss_age += loss_age.item()
+            total_loss_gender += loss_gender.item()
+            total_loss_disease += loss_disease.item()
             
             # Calculate accuracy for each task
             _, predicted_age = outputs[0].max(1)
@@ -156,11 +208,28 @@ def test(model, test_loader, criterion, device):
     
     # Calculate average loss and accuracy
     avg_loss = total_loss / len(test_loader)
+    avg_loss_age = total_loss_age / len(test_loader)
+    avg_loss_gender = total_loss_gender / len(test_loader)
+    avg_loss_disease = total_loss_disease / len(test_loader)
+    
+    # Calculate loss percentages
+    loss_percentages = {
+        'age_5': (avg_loss_age / avg_loss) * 100,
+        'gender': (avg_loss_gender / avg_loss) * 100,
+        'disease': (avg_loss_disease / avg_loss) * 100
+    }
+    
     accuracy = {
         'age_5': 100. * correct['age_5'] / total['age_5'],
         'gender': 100. * correct['gender'] / total['gender'],
         'disease': 100. * correct['disease'] / total['disease']
     }
+    
+    # Print loss magnitudes and percentages
+    logging.info(f"\nTest loss magnitudes:")
+    logging.info(f"Age loss: {avg_loss_age:.4f} ({loss_percentages['age_5']:.1f}%)")
+    logging.info(f"Gender loss: {avg_loss_gender:.4f} ({loss_percentages['gender']:.1f}%)")
+    logging.info(f"Disease loss: {avg_loss_disease:.4f} ({loss_percentages['disease']:.1f}%)")
     
     # Calculate confusion matrices
     confusion_matrices = {}
