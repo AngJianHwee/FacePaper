@@ -174,7 +174,14 @@ def test(model, test_loader, criterion, device):
 
 def main():
     # Set up logging
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(),  # Log to stdout
+            logging.FileHandler('training.log')  # Log to file
+        ]
+    )
     
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
