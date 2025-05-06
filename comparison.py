@@ -171,6 +171,7 @@ def main():
     
     # Initialize ResNet18 model
     model = ResNet18(num_classes=n_classes_disease).to(device)
+    print(f"Model: ResNet18")
     
     # Initialize optimizer and criterion
     optimizer = get_optimizer(model.parameters(), name='adam', lr=0.001, weight_decay=1e-4)
