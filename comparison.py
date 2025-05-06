@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from dataloaders.get_face_dataloaders import get_face_dataloaders
-from models.resnet import ResNet18
+from models.resnet_32x32 import ResNet18
 from utils.optimizers import get_optimizer
 from utils.loss import CrossEntropyLoss
 import logging
