@@ -9,6 +9,14 @@ import logging
 import time
 from tqdm import tqdm
 from sklearn.metrics import confusion_matrix
+import datetime
+import uuid
+
+def get_unique_suffix():
+    # Get current timestamp and UUID
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    unique_id = str(uuid.uuid4())[:8]  # Get first 8 characters of UUID
+    return f"{timestamp}_{unique_id}"
 
 def train_epoch(model, train_loader, optimizer, criterion, device):
     model.train()
@@ -242,24 +250,26 @@ def test(model, test_loader, criterion, device):
     return avg_loss, accuracy, confusion_matrices
 
 def main():
+    # Generate unique suffix for this run
+    run_suffix = get_unique_suffix()
+    
     # Set up logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),  # Log to stdout
-         
-            logging.FileHandler('training.log')  # Log to file
+            logging.FileHandler(f'training_{run_suffix}.log')  # Log to file with unique name
         ]
     )
     
-    print("Starting training process...")  # Added explicit print
-    logging.info("Starting training process...")
+    print(f"Starting training process... (Run ID: {run_suffix})")
+    logging.info(f"Starting training process... (Run ID: {run_suffix})")
     
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device: {device}')
-    print(f'Using device: {device}')  # Added explicit print
+    print(f'Using device: {device}')
     
     # Get dataloaders
     train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset, _ = get_face_dataloaders(
@@ -323,22 +333,25 @@ def main():
         # Save best model based on validation loss
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), 'best_model_val.pth')
-            print('Saved best validation model')
-            logging.info('Saved best validation model')
+            val_model_path = f'best_model_val_{run_suffix}.pth'
+            torch.save(model.state_dict(), val_model_path)
+            print(f'Saved best validation model to {val_model_path}')
+            logging.info(f'Saved best validation model to {val_model_path}')
         
         # Save best model based on test loss
         if test_loss < best_test_loss:
             best_test_loss = test_loss
-            torch.save(model.state_dict(), 'best_model_test.pth')
-            print('Saved best test model')
-            logging.info('Saved best test model')
+            test_model_path = f'best_model_test_{run_suffix}.pth'
+            torch.save(model.state_dict(), test_model_path)
+            print(f'Saved best test model to {test_model_path}')
+            logging.info(f'Saved best test model to {test_model_path}')
     
     print("\nTraining completed. Testing both best models...")
     
     # Test best validation model
     print("\nTesting best validation model...")
-    model.load_state_dict(torch.load('best_model_val.pth'))
+    val_model_path = f'best_model_val_{run_suffix}.pth'
+    model.load_state_dict(torch.load(val_model_path))
     val_test_loss, val_test_acc, val_confusion_matrices = test(model, test_loader, criterion, device)
     
     print('\nBest Validation Model Test Results:')
@@ -357,7 +370,8 @@ def main():
     
     # Test best test model
     print("\nTesting best test model...")
-    model.load_state_dict(torch.load('best_model_test.pth'))
+    test_model_path = f'best_model_test_{run_suffix}.pth'
+    model.load_state_dict(torch.load(test_model_path))
     test_test_loss, test_test_acc, test_confusion_matrices = test(model, test_loader, criterion, device)
     
     print('\nBest Test Model Test Results:')
@@ -391,7 +405,7 @@ def main():
         logging.info(f'\n{task.upper()} Confusion Matrix (Best Test Model):')
         logging.info(test_confusion_matrices[task])
     
-    print("\nTraining and testing completed successfully!")
+    print(f"\nTraining and testing completed successfully! (Run ID: {run_suffix})")
 
 if __name__ == '__main__':
     main() 
