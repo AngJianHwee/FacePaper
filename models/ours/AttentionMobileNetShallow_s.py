@@ -4,13 +4,15 @@ import torch.nn.functional as F
 
 
 class AttentionMobileNetShallow_s(nn.Module):
-    def __init__(self, input_channels, n_classes, input_size=224, use_attention=False, attention_channels=64):
+    def __init__(self, input_channels, n_classes_task1, n_classes_task2, n_classes_task3, input_size=224, use_attention=False, attention_channels=64):
         super(AttentionMobileNetShallow_s, self).__init__()
         self.input_channels = input_channels
-        self.n_classes = n_classes
+        self.n_classes_task1 = n_classes_task1
+        self.n_classes_task2 = n_classes_task2
+        self.n_classes_task3 = n_classes_task3
         self.input_size = input_size
         self.use_attention = use_attention
-        self.attention_channels = attention_channels  # New parameter for attention channels
+        self.attention_channels = attention_channels
 
         # Attention layers (only used if use_attention=True)
         if self.use_attention:
@@ -40,9 +42,7 @@ class AttentionMobileNetShallow_s(nn.Module):
             )
 
         if self.input_size == 224:
-
-            # Main model architecture (224x224 input)
-            self.model = nn.Sequential(
+            self.shared_conv = nn.Sequential(
                 conv_batch_norm(self.attention_channels if self.use_attention else input_channels, 32, 2),
                 conv_depth_wise(32, 64, 1),
                 conv_depth_wise(64, 128, 2),
@@ -50,34 +50,45 @@ class AttentionMobileNetShallow_s(nn.Module):
                 conv_depth_wise(128, 256, 2),
                 conv_depth_wise(256, 256, 1),
                 conv_depth_wise(256, 512, 2),
-                # conv_depth_wise(512, 512, 1),     # Reducing the number of depthwise convolutions to speed up the model
-                # conv_depth_wise(512, 512, 1),
-                # conv_depth_wise(512, 512, 1),
-                # conv_depth_wise(512, 512, 1),
-                conv_depth_wise(512, 512, 1),
-                conv_depth_wise(512, 1024, 2),
-                conv_depth_wise(1024, 1024, 1),
-                nn.AdaptiveAvgPool2d(1)
             )
         elif self.input_size == 32:
-            # Modified model for 32x32 inputs
-            self.model = nn.Sequential(
+            self.shared_conv = nn.Sequential(
                 conv_batch_norm(self.attention_channels if self.use_attention else input_channels, 32, 1),
                 conv_depth_wise(32, 64, 1),
                 conv_depth_wise(64, 128, 2),
                 conv_depth_wise(128, 256, 1),
                 conv_depth_wise(256, 512, 2),
-                # conv_depth_wise(512, 512, 1), # Reducing the number of depthwise convolutions to speed up the model
-                conv_depth_wise(512, 512, 1),
-                conv_depth_wise(512, 1024, 2),
-                nn.AdaptiveAvgPool2d(1)
             )
         else:
             raise ValueError("Input size must be either 32 or 224")
-                        
-        self.fc = nn.Linear(1024, n_classes)
 
-    
+        # Task-specific feature extractors
+        self.task1_conv = nn.Sequential(
+            conv_depth_wise(512, 512, 1),
+            conv_depth_wise(512, 1024, 2),
+            conv_depth_wise(1024, 1024, 1),
+            nn.AdaptiveAvgPool2d(1)
+        )
+
+        self.task2_conv = nn.Sequential(
+            conv_depth_wise(512, 512, 1),
+            conv_depth_wise(512, 1024, 2),
+            conv_depth_wise(1024, 1024, 1),
+            nn.AdaptiveAvgPool2d(1)
+        )
+
+        self.task3_conv = nn.Sequential(
+            conv_depth_wise(512, 512, 1),
+            conv_depth_wise(512, 1024, 2),
+            conv_depth_wise(1024, 1024, 1),
+            nn.AdaptiveAvgPool2d(1)
+        )
+
+        # Task-specific fully connected layers
+        self.fc1 = nn.Linear(1024, n_classes_task1)
+        self.fc2 = nn.Linear(1024, n_classes_task2)
+        self.fc3 = nn.Linear(1024, n_classes_task3)
+
     def apply_attention(self, x):
         bs, c, h, w = x.shape
         x_att = x.reshape(bs, c, h * w).transpose(1, 2)  # BSxHWxC
@@ -88,30 +99,40 @@ class AttentionMobileNetShallow_s(nn.Module):
     def forward(self, x, return_att_map=False, return_latent=False):
         if self.use_attention:
             x = self.att_conv(x)
-            # x = self.apply_attention(x)
             x_att, att_map = self.apply_attention(x)
             x = x + self.scale * x_att  # Residual connection
         else:
             att_map = None
             x_att = None
-        # now pass x through the model
-        
-        x = self.model(x)
-        
-        x = x.view(-1, 1024)
-        # copy x to latent
+
+        # Shared feature extraction
+        x = self.shared_conv(x)
+
+        # Task-specific feature extraction
+        x1 = self.task1_conv(x)
+        x2 = self.task2_conv(x)
+        x3 = self.task3_conv(x)
+
+        # Reshape and apply task-specific FC layers
+        x1 = x1.view(-1, 1024)
+        x2 = x2.view(-1, 1024)
+        x3 = x3.view(-1, 1024)
+
+        out1 = self.fc1(x1)
+        out2 = self.fc2(x2)
+        out3 = self.fc3(x3)
+
         if return_latent:
             latent = x.clone()
-        x = self.fc(x)
 
         if return_att_map:
             if return_latent:
-                return x, att_map, x_att, latent
+                return (out1, out2, out3), att_map, x_att, latent
             else:
-                return x, att_map, x_att
+                return (out1, out2, out3), att_map, x_att
         else:
             if return_latent:
-                return x, latent
+                return (out1, out2, out3), latent
             else:
-                return x
+                return (out1, out2, out3)
 
