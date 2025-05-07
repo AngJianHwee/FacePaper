@@ -225,7 +225,7 @@ def train_task(task, run_suffix, device):
         # Save best model based on validation loss
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            val_model_path = os.path.join(task_dir, f'best_model_val.pth')
+            val_model_path = os.path.join(task_dir, f'best_model_val_EfficientNetB0.pth')
             torch.save(model.state_dict(), val_model_path)
             print(f'[{i}/{num_epochs}] Saved best validation model to {val_model_path}')
             logging.info(f'[{i}/{num_epochs}] Saved best validation model to {val_model_path}')
@@ -233,7 +233,7 @@ def train_task(task, run_suffix, device):
         # Save best model based on test loss
         if test_loss < best_test_loss:
             best_test_loss = test_loss
-            test_model_path = os.path.join(task_dir, f'best_model_test.pth')
+            test_model_path = os.path.join(task_dir, f'best_model_test_EfficientNetB0.pth')
             torch.save(model.state_dict(), test_model_path)
             print(f'[{i}/{num_epochs}] Saved best test model to {test_model_path}')
             logging.info(f'[{i}/{num_epochs}] Saved best test model to {test_model_path}')
@@ -242,7 +242,7 @@ def train_task(task, run_suffix, device):
     
     # Test best validation model
     print(f"\nTesting best validation model for {task}...")
-    val_model_path = os.path.join(task_dir, 'best_model_val.pth')
+    val_model_path = os.path.join(task_dir, 'best_model_val_EfficientNetB0.pth')
     model.load_state_dict(torch.load(val_model_path))
     val_test_loss, val_test_acc, val_confusion_mat = test(model, test_loader, criterion, device, task=task)
     
@@ -256,7 +256,7 @@ def train_task(task, run_suffix, device):
     
     # Test best test model
     print(f"\nTesting best test model for {task}...")
-    test_model_path = os.path.join(task_dir, 'best_model_test.pth')
+    test_model_path = os.path.join(task_dir, 'best_model_test_EfficientNetB0.pth')
     model.load_state_dict(torch.load(test_model_path))
     test_test_loss, test_test_acc, test_confusion_mat = test(model, test_loader, criterion, device, task=task)
     
