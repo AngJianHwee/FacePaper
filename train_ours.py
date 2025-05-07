@@ -172,12 +172,21 @@ def test(model, test_loader, criterion, device, current_epoch=None, total_epochs
     all_predictions = {'age_5': [], 'gender': [], 'disease': []}
     all_targets = {'age_5': [], 'gender': [], 'disease': []}
     
+    # For timing measurements
+    total_inference_time = 0
+    num_batches = 0
+    
     with torch.no_grad():
         for images, labels, _ in tqdm(test_loader, desc='Testing'):
             images = images.to(device)
             labels = {k: v.to(device) for k, v in labels.items()}
             
+            # Measure inference time
+            start_time = time.time()
             outputs = model(images)
+            end_time = time.time()
+            total_inference_time += (end_time - start_time)
+            num_batches += 1
             
             # Calculate loss for each task
             loss_age = criterion(outputs[0], labels['age_5'])
@@ -220,6 +229,9 @@ def test(model, test_loader, criterion, device, current_epoch=None, total_epochs
     avg_loss_gender = total_loss_gender / len(test_loader)
     avg_loss_disease = total_loss_disease / len(test_loader)
     
+    # Calculate average inference time
+    avg_inference_time = total_inference_time / num_batches
+    
     # Calculate loss percentages
     loss_percentages = {
         'age_5': (avg_loss_age / avg_loss) * 100,
@@ -248,7 +260,7 @@ def test(model, test_loader, criterion, device, current_epoch=None, total_epochs
             all_predictions[task]
         )
     
-    return avg_loss, accuracy, confusion_matrices
+    return avg_loss, accuracy, confusion_matrices, avg_inference_time
 
 def main():
     # Generate unique suffix for this run
@@ -295,6 +307,8 @@ def main():
         input_size=32,
         use_attention=True
     ).to(device)
+    print(f"Model: AttentionMobileNetShallow_s_three_task")
+    
     
     # Initialize optimizer and criterion
     optimizer = get_optimizer(model.parameters(), name='adam', lr=0.001, weight_decay=1e-4)
@@ -317,7 +331,7 @@ def main():
         val_loss, val_acc = validate(model, val_loader, criterion, device, i, num_epochs)
         
         # Test after each epoch
-        test_loss, test_acc, _ = test(model, test_loader, criterion, device, i, num_epochs)
+        test_loss, test_acc, test_confusion_matrices, test_avg_inference_time = test(model, test_loader, criterion, device, i, num_epochs)
         
         # Print epoch results
         epoch_time = time.time() - start_time
@@ -353,7 +367,7 @@ def main():
     print("\nTesting best validation model...")
     val_model_path = f'best_model_val_{run_suffix}.pth'
     model.load_state_dict(torch.load(val_model_path))
-    val_test_loss, val_test_acc, val_confusion_matrices = test(model, test_loader, criterion, device)
+    val_test_loss, val_test_acc, val_confusion_matrices, val_avg_inference_time = test(model, test_loader, criterion, device)
     
     print('\nBest Validation Model Test Results:')
     print(f'Test Loss: {val_test_loss:.4f}')
@@ -361,6 +375,7 @@ def main():
     print(f'Age: {val_test_acc["age_5"]:.2f}%')
     print(f'Gender: {val_test_acc["gender"]:.2f}%')
     print(f'Disease: {val_test_acc["disease"]:.2f}%')
+    print(f'Average Inference Time: {val_avg_inference_time*1000:.2f} ms per batch')
     
     logging.info('\nBest Validation Model Test Results:')
     logging.info(f'Test Loss: {val_test_loss:.4f}')
@@ -368,12 +383,13 @@ def main():
     logging.info(f'Age: {val_test_acc["age_5"]:.2f}%')
     logging.info(f'Gender: {val_test_acc["gender"]:.2f}%')
     logging.info(f'Disease: {val_test_acc["disease"]:.2f}%')
+    logging.info(f'Average Inference Time: {val_avg_inference_time*1000:.2f} ms per batch')
     
     # Test best test model
     print("\nTesting best test model...")
     test_model_path = f'best_model_test_{run_suffix}.pth'
     model.load_state_dict(torch.load(test_model_path))
-    test_test_loss, test_test_acc, test_confusion_matrices = test(model, test_loader, criterion, device)
+    test_test_loss, test_test_acc, test_confusion_matrices, test_avg_inference_time = test(model, test_loader, criterion, device)
     
     print('\nBest Test Model Test Results:')
     print(f'Test Loss: {test_test_loss:.4f}')
@@ -381,6 +397,7 @@ def main():
     print(f'Age: {test_test_acc["age_5"]:.2f}%')
     print(f'Gender: {test_test_acc["gender"]:.2f}%')
     print(f'Disease: {test_test_acc["disease"]:.2f}%')
+    print(f'Average Inference Time: {test_avg_inference_time*1000:.2f} ms per batch')
     
     logging.info('\nBest Test Model Test Results:')
     logging.info(f'Test Loss: {test_test_loss:.4f}')
@@ -388,6 +405,7 @@ def main():
     logging.info(f'Age: {test_test_acc["age_5"]:.2f}%')
     logging.info(f'Gender: {test_test_acc["gender"]:.2f}%')
     logging.info(f'Disease: {test_test_acc["disease"]:.2f}%')
+    logging.info(f'Average Inference Time: {test_avg_inference_time*1000:.2f} ms per batch')
     
     # Print confusion matrices for both models
     print('\nConfusion Matrices for Best Validation Model:')
