@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from dataloaders.get_face_dataloaders import get_face_dataloaders
-from models.swin_32x32 import swin_tiny
+from models.cait_32x32 import cait_tiny
 from utils.optimizers import get_optimizer
 from utils.loss import CrossEntropyLoss
 import logging
@@ -160,7 +160,7 @@ def train_task(task, run_suffix, device):
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler(os.path.join(task_dir, f'training_{task}_swin_tiny.log'))
+            logging.FileHandler(os.path.join(task_dir, f'training_{task}_cait_tiny.log'))
         ]
     )
     
@@ -183,9 +183,9 @@ def train_task(task, run_suffix, device):
     # Get number of classes for the task
     n_classes = len(train_dataset.label_mappings[task])
     
-    # Initialize Swin Tiny model
-    model = swin_tiny(num_classes=n_classes).to(device)
-    print(f"Model: Swin Tiny for {task}")
+    # Initialize CaiT Tiny model
+    model = cait_tiny(num_classes=n_classes).to(device)
+    print(f"Model: CaiT Tiny for {task}")
     print(f"Number of epochs: {num_epochs}")
     
     # Initialize optimizer and criterion
@@ -225,7 +225,7 @@ def train_task(task, run_suffix, device):
         # Save best model based on validation loss
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            val_model_path = os.path.join(task_dir, 'best_model_val_swin_tiny.pth')
+            val_model_path = os.path.join(task_dir, 'best_model_val_cait_tiny.pth')
             torch.save(model.state_dict(), val_model_path)
             print(f'[{i}/{num_epochs}] Saved best validation model to {val_model_path}')
             logging.info(f'[{i}/{num_epochs}] Saved best validation model to {val_model_path}')
@@ -233,7 +233,7 @@ def train_task(task, run_suffix, device):
         # Save best model based on test loss
         if test_loss < best_test_loss:
             best_test_loss = test_loss
-            test_model_path = os.path.join(task_dir, 'best_model_test_swin_tiny.pth')
+            test_model_path = os.path.join(task_dir, 'best_model_test_cait_tiny.pth')
             torch.save(model.state_dict(), test_model_path)
             print(f'[{i}/{num_epochs}] Saved best test model to {test_model_path}')
             logging.info(f'[{i}/{num_epochs}] Saved best test model to {test_model_path}')
@@ -242,7 +242,7 @@ def train_task(task, run_suffix, device):
     
     # Test best validation model
     print(f"\nTesting best validation model for {task}...")
-    val_model_path = os.path.join(task_dir, 'best_model_val_swin_tiny.pth')
+    val_model_path = os.path.join(task_dir, 'best_model_val_cait_tiny.pth')
     model.load_state_dict(torch.load(val_model_path))
     val_test_loss, val_test_acc, val_confusion_mat = test(model, test_loader, criterion, device, task=task)
     
@@ -256,7 +256,7 @@ def train_task(task, run_suffix, device):
     
     # Test best test model
     print(f"\nTesting best test model for {task}...")
-    test_model_path = os.path.join(task_dir, 'best_model_test_swin_tiny.pth')
+    test_model_path = os.path.join(task_dir, 'best_model_test_cait_tiny.pth')
     model.load_state_dict(torch.load(test_model_path))
     test_test_loss, test_test_acc, test_confusion_mat = test(model, test_loader, criterion, device, task=task)
     
