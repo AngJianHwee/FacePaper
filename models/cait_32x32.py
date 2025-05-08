@@ -182,7 +182,7 @@ class CaiT(nn.Module):
 
 def cait_tiny(num_classes=10):
     return CaiT(
-        image_size=size,
+        image_size=32,
         patch_size=4,
         num_classes=num_classes,
         dim=512,
