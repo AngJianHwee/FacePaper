@@ -240,7 +240,7 @@ def main():
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),  # Log to stdout
-            logging.FileHandler(f'training_{run_suffix}.log')  # Log to file with unique name
+            logging.FileHandler(f'ablation_disease_age_training_{run_suffix}.log')  # Log to file with unique name
         ]
     )
     
@@ -313,7 +313,7 @@ def main():
         # Save best model based on validation loss
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            val_model_path = f'best_model_val_{run_suffix}.pth'
+            val_model_path = f'ablation_disease_age_best_model_val_{run_suffix}.pth'
             torch.save(model.state_dict(), val_model_path)
             print(f'[{i}/{num_epochs}] Saved best validation model to {val_model_path}')
             logging.info(f'[{i}/{num_epochs}] Saved best validation model to {val_model_path}')
@@ -321,7 +321,7 @@ def main():
         # Save best model based on test loss
         if test_loss < best_test_loss:
             best_test_loss = test_loss
-            test_model_path = f'best_model_test_{run_suffix}.pth'
+            test_model_path = f'ablation_disease_age_best_model_test_{run_suffix}.pth'
             torch.save(model.state_dict(), test_model_path)
             print(f'[{i}/{num_epochs}] Saved best test model to {test_model_path}')
             logging.info(f'[{i}/{num_epochs}] Saved best test model to {test_model_path}')
@@ -330,7 +330,7 @@ def main():
     
     # Test best validation model
     print("\nTesting best validation model...")
-    val_model_path = f'best_model_val_{run_suffix}.pth'
+    val_model_path = f'ablation_disease_age_best_model_val_{run_suffix}.pth'
     model.load_state_dict(torch.load(val_model_path))
     val_test_loss, val_test_acc, val_confusion_matrices, val_avg_inference_time = test(model, test_loader, criterion, device)
     
@@ -350,7 +350,7 @@ def main():
     
     # Test best test model
     print("\nTesting best test model...")
-    test_model_path = f'best_model_test_{run_suffix}.pth'
+    test_model_path = f'ablation_disease_age_best_model_test_{run_suffix}.pth'
     model.load_state_dict(torch.load(test_model_path))
     test_test_loss, test_test_acc, test_confusion_matrices, test_avg_inference_time = test(model, test_loader, criterion, device)
     

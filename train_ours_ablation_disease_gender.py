@@ -240,7 +240,7 @@ def main():
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),  # Log to stdout
-            logging.FileHandler(f'training_{run_suffix}.log')  # Log to file with unique name
+            logging.FileHandler(f'ablation_disease_gender_training_{run_suffix}.log')  # Log to file with unique name
         ]
     )
     
