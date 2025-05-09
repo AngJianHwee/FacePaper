@@ -16,6 +16,7 @@ import os
 import json
 import logging
 from datetime import datetime
+import GPUtil
 
 def setup_logging():
     # Create a timestamp for the log file
@@ -45,35 +46,78 @@ def get_gpu_memory_reserved():
         return torch.cuda.memory_reserved() / 1024**2  # Convert to MB
     return 0
 
+def get_gpu_memory_used():
+    """Get current GPU memory used according to nvidia-smi in MB"""
+    if torch.cuda.is_available():
+        gpu = GPUtil.getGPUs()[0]
+        return gpu.memoryUsed  # Already in MB
+    return 0
+
+def calculate_model_size(model):
+    """Calculate the actual size of model parameters and buffers in MB"""
+    total_params = sum(p.numel() for p in model.parameters())
+    total_buffers = sum(b.numel() for b in model.buffers())
+    
+    # Assuming float32 (4 bytes per parameter)
+    param_size = total_params * 4 / (1024**2)  # Convert to MB
+    buffer_size = total_buffers * 4 / (1024**2)  # Convert to MB
+    
+    return {
+        'total_params': total_params,
+        'total_buffers': total_buffers,
+        'param_size_mb': param_size,
+        'buffer_size_mb': buffer_size,
+        'total_size_mb': param_size + buffer_size
+    }
+
 def measure_model_memory(model, device, model_name=None, task=None):
-    """Measure the memory footprint of a loaded model"""
+    """Measure both the actual model size and GPU memory usage"""
     context = f"[{model_name}][{task}]" if model_name and task else ""
     logging.info(f"{context} Measuring model memory footprint")
+    
+    # Calculate actual model size (parameters + buffers)
+    model_size = calculate_model_size(model)
+    logging.info(f"{context} Model size (parameters + buffers): {model_size['total_size_mb']:.2f} MB")
+    logging.info(f"{context} Number of parameters: {model_size['total_params']:,}")
+    logging.info(f"{context} Number of buffers: {model_size['total_buffers']:,}")
     
     # Clear GPU cache before measurement
     if device.type == 'cuda':
         torch.cuda.empty_cache()
         initial_memory = get_gpu_memory_usage()
-        logging.debug(f"{context} Initial GPU memory: {initial_memory:.2f} MB")
+        initial_reserved = get_gpu_memory_reserved()
+        initial_used = get_gpu_memory_used()
+        logging.debug(f"{context} Initial GPU memory - Allocated: {initial_memory:.2f} MB, Reserved: {initial_reserved:.2f} MB, Used: {initial_used:.2f} MB")
     
     # Move model to device
     model = model.to(device)
     
-    # Get model memory usage
+    # Get GPU memory usage
     if device.type == 'cuda':
-        model_memory = get_gpu_memory_usage() - initial_memory
-        model_reserved = get_gpu_memory_reserved() - initial_memory
+        allocated_memory = get_gpu_memory_usage() - initial_memory
+        reserved_memory = get_gpu_memory_reserved() - initial_reserved
+        used_memory = get_gpu_memory_used() - initial_used
         
-        logging.info(f"{context} Model memory usage: {model_memory:.2f} MB")
-        logging.info(f"{context} Model memory reserved: {model_reserved:.2f} MB")
+        logging.info(f"{context} GPU Memory Usage:")
+        logging.info(f"{context} - Allocated (torch.cuda.memory_allocated): {allocated_memory:.2f} MB")
+        logging.info(f"{context} - Reserved (torch.cuda.memory_reserved): {reserved_memory:.2f} MB")
+        logging.info(f"{context} - Used (nvidia-smi): {used_memory:.2f} MB")
         
         return {
-            'model_memory_mb': model_memory,
-            'model_reserved_mb': model_reserved
+            'model_size_mb': model_size['total_size_mb'],
+            'allocated_memory_mb': allocated_memory,
+            'reserved_memory_mb': reserved_memory,
+            'used_memory_mb': used_memory,
+            'total_params': model_size['total_params'],
+            'total_buffers': model_size['total_buffers']
         }
     return {
-        'model_memory_mb': 0,
-        'model_reserved_mb': 0
+        'model_size_mb': model_size['total_size_mb'],
+        'allocated_memory_mb': 0,
+        'reserved_memory_mb': 0,
+        'used_memory_mb': 0,
+        'total_params': model_size['total_params'],
+        'total_buffers': model_size['total_buffers']
     }
 
 def load_model(model_name, task, device):
@@ -161,14 +205,18 @@ def main():
             memory_results = measure_model_memory(model, device, model_name=model_name, task=task)
             
             # Store results
-            model_results[task] = {
-                'model_memory_mb': memory_results['model_memory_mb'],
-                'model_reserved_mb': memory_results['model_reserved_mb']
-            }
+            model_results[task] = memory_results
             
             logging.info(f"\n[{model_name}][{task}] Results summary:")
-            logging.info(f"[{model_name}][{task}] Model memory: {memory_results['model_memory_mb']:.2f} MB")
-            logging.info(f"[{model_name}][{task}] Model reserved: {memory_results['model_reserved_mb']:.2f} MB")
+            logging.info(f"[{model_name}][{task}] Model size (parameters + buffers): {memory_results['model_size_mb']:.2f} MB")
+            logging.info(f"[{model_name}][{task}] GPU Memory Usage:")
+            logging.info(f"[{model_name}][{task}] - Allocated: {memory_results['allocated_memory_mb']:.2f} MB")
+            logging.info(f"[{model_name}][{task}] - Reserved: {memory_results['reserved_memory_mb']:.2f} MB")
+            logging.info(f"[{model_name}][{task}] - Used (nvidia-smi): {memory_results['used_memory_mb']:.2f} MB")
+            
+            # Clean up
+            del model
+            torch.cuda.empty_cache()
         
         all_results[model_name] = model_results
     
@@ -183,16 +231,27 @@ def main():
     logging.info(f"Results saved successfully")
     logging.info(f"Log file saved to: {log_file}")
     
-    # Print summary table
-    logging.info("\nSummary of Model Memory Usage (MB):")
+    # Print summary tables
+    logging.info("\nSummary of Model Sizes (MB):")
     logging.info("\nModel\t\tAge\t\tGender\t\tDisease")
     logging.info("-" * 60)
     
     for model_name in models:
         row = f"{model_name:<15}"
         for task in tasks:
-            memory = all_results[model_name][task]['model_memory_mb']
-            row += f"{memory:>8.2f} MB\t"
+            size = all_results[model_name][task]['model_size_mb']
+            row += f"{size:>8.2f} MB\t"
+        logging.info(row)
+    
+    logging.info("\nSummary of GPU Memory Usage (MB) - nvidia-smi:")
+    logging.info("\nModel\t\tAge\t\tGender\t\tDisease")
+    logging.info("-" * 60)
+    
+    for model_name in models:
+        row = f"{model_name:<15}"
+        for task in tasks:
+            used = all_results[model_name][task]['used_memory_mb']
+            row += f"{used:>8.2f} MB\t"
         logging.info(row)
     
     logging.info("\nScript execution completed successfully")
