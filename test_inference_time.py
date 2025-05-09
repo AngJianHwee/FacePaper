@@ -238,7 +238,7 @@ def main():
             timing_results = measure_inference_time(model, test_loader, device)
             
             # Measure batch inference time
-            batch_sizes = [8, 16, 32, 64]
+            batch_sizes = [8, 16, 32]
             batch_results = {}
             
             for batch_size in batch_sizes:
