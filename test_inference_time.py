@@ -35,12 +35,16 @@ def setup_logging():
 
 def load_model(model_name, task, device):
     """Load the appropriate model based on model name and task"""
+    logging.info(f"[{model_name}][{task}] Loading model")
+    
     # Define number of classes for each task
     n_classes = {
         'age_5': 4,    # 4 age classes
         'disease': 11,  # 11 disease classes
         'gender': 2    # 2 gender classes
     }
+    
+    logging.debug(f"[{model_name}][{task}] Number of classes: {n_classes[task]}")
     
     if model_name == 'ours':
         model = AttentionMobileNetShallow_s_three_task(
@@ -66,23 +70,28 @@ def load_model(model_name, task, device):
     else:
         raise ValueError(f"Unknown model name: {model_name}")
     
+    logging.info(f"[{model_name}][{task}] Successfully loaded model")
     return model
 
-def measure_inference_time(model, test_loader, device, num_warmup=10, num_runs=100):
+def measure_inference_time(model, test_loader, device, num_warmup=10, num_runs=100, model_name=None, task=None):
     """Measure inference time for a model"""
     model.eval()
+    context = f"[{model_name}][{task}]" if model_name and task else ""
+    logging.info(f"{context} Starting inference time measurement with {num_warmup} warmup runs and {num_runs} timing runs")
     
     # Warmup runs
-    logging.info("Performing warmup runs...")
+    logging.info(f"{context} Performing warmup runs...")
     with torch.no_grad():
         for i, (images, _, _) in enumerate(test_loader):
             if i >= num_warmup:
                 break
             images = images.to(device)
             _ = model(images)
+            if (i + 1) % 5 == 0:
+                logging.debug(f"{context} Completed {i + 1}/{num_warmup} warmup runs")
     
     # Actual timing runs
-    logging.info("Measuring inference time...")
+    logging.info(f"{context} Measuring inference time...")
     inference_times = []
     
     with torch.no_grad():
@@ -105,7 +114,11 @@ def measure_inference_time(model, test_loader, device, num_warmup=10, num_runs=1
                 torch.cuda.synchronize()
             
             end_time = time.time()
-            inference_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
+            inference_time = (end_time - start_time) * 1000  # Convert to milliseconds
+            inference_times.append(inference_time)
+            
+            if (i + 1) % 10 == 0:
+                logging.debug(f"{context} Completed {i + 1}/{num_runs} timing runs. Last inference time: {inference_time:.2f}ms")
     
     # Calculate statistics
     mean_time = np.mean(inference_times)
@@ -113,7 +126,12 @@ def measure_inference_time(model, test_loader, device, num_warmup=10, num_runs=1
     min_time = np.min(inference_times)
     max_time = np.max(inference_times)
     
-    logging.debug(f"Raw inference times: {inference_times}")
+    logging.info(f"{context} Inference time statistics:")
+    logging.info(f"{context} Mean: {mean_time:.2f}ms")
+    logging.info(f"{context} Std: {std_time:.2f}ms")
+    logging.info(f"{context} Min: {min_time:.2f}ms")
+    logging.info(f"{context} Max: {max_time:.2f}ms")
+    logging.debug(f"{context} Raw inference times: {inference_times}")
     
     return {
         'mean': mean_time,
@@ -123,9 +141,11 @@ def measure_inference_time(model, test_loader, device, num_warmup=10, num_runs=1
         'all_times': inference_times
     }
 
-def measure_batch_inference_time(model, test_loader, device, batch_size=32, num_warmup=10, num_runs=100):
+def measure_batch_inference_time(model, test_loader, device, batch_size=32, num_warmup=10, num_runs=100, model_name=None, task=None):
     """Measure inference time for a model with different batch sizes"""
     model.eval()
+    context = f"[{model_name}][{task}]" if model_name and task else ""
+    logging.info(f"{context} Starting batch inference time measurement with batch size {batch_size}")
     
     # Create a new dataloader with the specified batch size
     batch_loader = DataLoader(
@@ -134,18 +154,21 @@ def measure_batch_inference_time(model, test_loader, device, batch_size=32, num_
         shuffle=False,
         num_workers=4
     )
+    logging.debug(f"{context} Created dataloader with batch size {batch_size}")
     
     # Warmup runs
-    logging.info(f"Performing warmup runs with batch size {batch_size}...")
+    logging.info(f"{context} Performing warmup runs with batch size {batch_size}...")
     with torch.no_grad():
         for i, (images, _, _) in enumerate(batch_loader):
             if i >= num_warmup:
                 break
             images = images.to(device)
             _ = model(images)
+            if (i + 1) % 5 == 0:
+                logging.debug(f"{context} Completed {i + 1}/{num_warmup} warmup runs")
     
     # Actual timing runs
-    logging.info(f"Measuring batch inference time with batch size {batch_size}...")
+    logging.info(f"{context} Measuring batch inference time with batch size {batch_size}...")
     inference_times = []
     
     with torch.no_grad():
@@ -168,7 +191,11 @@ def measure_batch_inference_time(model, test_loader, device, batch_size=32, num_
                 torch.cuda.synchronize()
             
             end_time = time.time()
-            inference_times.append((end_time - start_time) * 1000)  # Convert to milliseconds
+            inference_time = (end_time - start_time) * 1000  # Convert to milliseconds
+            inference_times.append(inference_time)
+            
+            if (i + 1) % 5 == 0:
+                logging.debug(f"{context} Completed {i + 1}/{num_runs} timing runs. Last batch inference time: {inference_time:.2f}ms")
     
     # Calculate statistics
     mean_time = np.mean(inference_times)
@@ -180,7 +207,13 @@ def measure_batch_inference_time(model, test_loader, device, batch_size=32, num_
     mean_time_per_image = mean_time / batch_size
     std_time_per_image = std_time / batch_size
     
-    logging.debug(f"Raw batch inference times for batch size {batch_size}: {inference_times}")
+    logging.info(f"{context} Batch inference time statistics for batch size {batch_size}:")
+    logging.info(f"{context} Mean batch time: {mean_time:.2f}ms")
+    logging.info(f"{context} Mean per image: {mean_time_per_image:.2f}ms")
+    logging.info(f"{context} Std batch time: {std_time:.2f}ms")
+    logging.info(f"{context} Min batch time: {min_time:.2f}ms")
+    logging.info(f"{context} Max batch time: {max_time:.2f}ms")
+    logging.debug(f"{context} Raw batch inference times for batch size {batch_size}: {inference_times}")
     
     return {
         'mean_batch_ms': mean_time,
@@ -200,10 +233,14 @@ def main():
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device: {device}')
+    if device.type == 'cuda':
+        logging.info(f'GPU: {torch.cuda.get_device_name(0)}')
     
     # Define models and tasks to test
     models = ['ours', 'cait_tiny', 'efficientnet', 'resnet18', 'resnext', 'swin_tiny', 'vitsmall']
     tasks = ['age_5', 'gender', 'disease']
+    logging.info(f"Testing models: {models}")
+    logging.info(f"Testing tasks: {tasks}")
     
     # Create results directory
     results_dir = 'inference_time_results'
@@ -215,13 +252,18 @@ def main():
     
     # Test each model and task combination
     for model_name in models:
-        logging.info(f"\nTesting model: {model_name}")
+        logging.info(f"\n{'='*50}")
+        logging.info(f"Testing model: {model_name}")
+        logging.info(f"{'='*50}")
         model_results = {}
         
         for task in tasks:
-            logging.info(f"\nTesting task: {task}")
+            logging.info(f"\n{'-'*30}")
+            logging.info(f"Testing task: {task}")
+            logging.info(f"{'-'*30}")
             
             # Get dataloader
+            logging.info(f"[{model_name}][{task}] Loading dataset...")
             _, _, test_loader, train_dataset, _, _, _ = get_face_dataloaders(
                 data_dir='./data/face',
                 batch_size=1,  # Use batch size 1 for per-image timing
@@ -229,21 +271,22 @@ def main():
                 task=task,
                 resize=32
             )
+            logging.info(f"[{model_name}][{task}] Dataset loaded. Test set size: {len(test_loader.dataset)}")
             
             # Load model
             model = load_model(model_name, task, device)
-            logging.info(f"Loaded model {model_name} for task {task}")
             
             # Measure per-image inference time
-            timing_results = measure_inference_time(model, test_loader, device)
+            logging.info(f"\n[{model_name}][{task}] Measuring per-image inference time...")
+            timing_results = measure_inference_time(model, test_loader, device, model_name=model_name, task=task)
             
             # Measure batch inference time
-            batch_sizes = [8, 16, 32]
+            batch_sizes = [32]
             batch_results = {}
             
             for batch_size in batch_sizes:
-                logging.info(f"\nTesting batch size: {batch_size}")
-                batch_timing = measure_batch_inference_time(model, test_loader, device, batch_size)
+                logging.info(f"\n[{model_name}][{task}] Testing batch size: {batch_size}")
+                batch_timing = measure_batch_inference_time(model, test_loader, device, batch_size, model_name=model_name, task=task)
                 batch_results[batch_size] = {
                     'mean_batch_ms': batch_timing['mean_batch_ms'],
                     'std_batch_ms': batch_timing['std_batch_ms'],
@@ -262,18 +305,18 @@ def main():
                 'batch_results': batch_results
             }
             
-            logging.info(f"\nResults for {model_name} on {task}:")
-            logging.info("Per-image inference time:")
-            logging.info(f"Mean: {timing_results['mean']:.2f} ms")
-            logging.info(f"Std deviation: {timing_results['std']:.2f} ms")
-            logging.info(f"Min: {timing_results['min']:.2f} ms")
-            logging.info(f"Max: {timing_results['max']:.2f} ms")
+            logging.info(f"\n[{model_name}][{task}] Results summary:")
+            logging.info(f"[{model_name}][{task}] Per-image inference time:")
+            logging.info(f"[{model_name}][{task}] Mean: {timing_results['mean']:.2f} ms")
+            logging.info(f"[{model_name}][{task}] Std deviation: {timing_results['std']:.2f} ms")
+            logging.info(f"[{model_name}][{task}] Min: {timing_results['min']:.2f} ms")
+            logging.info(f"[{model_name}][{task}] Max: {timing_results['max']:.2f} ms")
             
-            logging.info("\nBatch inference times:")
+            logging.info(f"\n[{model_name}][{task}] Batch inference times:")
             for batch_size, results in batch_results.items():
-                logging.info(f"\nBatch size {batch_size}:")
-                logging.info(f"Mean batch time: {results['mean_batch_ms']:.2f} ms")
-                logging.info(f"Mean per image: {results['mean_per_image_ms']:.2f} ms")
+                logging.info(f"\n[{model_name}][{task}] Batch size {batch_size}:")
+                logging.info(f"[{model_name}][{task}] Mean batch time: {results['mean_batch_ms']:.2f} ms")
+                logging.info(f"[{model_name}][{task}] Mean per image: {results['mean_per_image_ms']:.2f} ms")
         
         all_results[model_name] = model_results
     
@@ -281,10 +324,11 @@ def main():
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     results_file = os.path.join(results_dir, f'inference_times_{timestamp}.json')
     
+    logging.info(f"\nSaving results to: {results_file}")
     with open(results_file, 'w') as f:
         json.dump(all_results, f, indent=4)
     
-    logging.info(f"\nResults saved to: {results_file}")
+    logging.info(f"Results saved successfully")
     logging.info(f"Log file saved to: {log_file}")
     
     # Print summary tables
@@ -313,7 +357,7 @@ def main():
                 row += f"{mean_time:>8.2f} ms\t"
             logging.info(row)
     
-    logging.info("Script execution completed successfully")
+    logging.info("\nScript execution completed successfully")
 
 if __name__ == '__main__':
     main() 
