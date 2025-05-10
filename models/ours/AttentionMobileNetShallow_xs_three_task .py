@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class AttentionMobileNetShallow_s_three_task(nn.Module):
+class AttentionMobileNetShallow_xs_three_task(nn.Module):
     def __init__(self, input_channels, n_classes_task1, n_classes_task2, n_classes_task3, input_size=224, use_attention=False, attention_channels=64):
-        super(AttentionMobileNetShallow_s_three_task, self).__init__()
+        super(AttentionMobileNetShallow_xs_three_task, self).__init__()
         self.input_channels = input_channels
         self.n_classes_task1 = n_classes_task1
         self.n_classes_task2 = n_classes_task2
@@ -43,51 +43,48 @@ class AttentionMobileNetShallow_s_three_task(nn.Module):
 
         if self.input_size == 224:
             self.shared_conv = nn.Sequential(
-                conv_batch_norm(self.attention_channels if self.use_attention else input_channels, 32, 2),
-                conv_depth_wise(32, 64, 1),
+                conv_batch_norm(self.attention_channels if self.use_attention else input_channels, 16, 2),
+                conv_depth_wise(16, 32, 1),
+                conv_depth_wise(32, 64, 2),
                 conv_depth_wise(64, 128, 2),
-                conv_depth_wise(128, 128, 1),
                 conv_depth_wise(128, 256, 2),
-                conv_depth_wise(256, 256, 1),
-                conv_depth_wise(256, 512, 2),
             )
         elif self.input_size == 32:
             self.shared_conv = nn.Sequential(
-                conv_batch_norm(self.attention_channels if self.use_attention else input_channels, 32, 1),
-                conv_depth_wise(32, 64, 1),
+                conv_batch_norm(self.attention_channels if self.use_attention else input_channels, 16, 1),
+                conv_depth_wise(16, 32, 1),
+                conv_depth_wise(32, 64, 2),
                 conv_depth_wise(64, 128, 2),
-                conv_depth_wise(128, 256, 1),
-                conv_depth_wise(256, 512, 2),
             )
         else:
             raise ValueError("Input size must be either 32 or 224")
 
-        # Task-specific feature extractors
+        # Task-specific feature extractors with reduced channels
         self.task1_conv = nn.Sequential(
+            conv_depth_wise(256 if self.input_size == 224 else 128, 256, 1),
+            conv_depth_wise(256, 512, 2),
             conv_depth_wise(512, 512, 1),
-            conv_depth_wise(512, 1024, 2),
-            conv_depth_wise(1024, 1024, 1),
             nn.AdaptiveAvgPool2d(1)
         )
 
         self.task2_conv = nn.Sequential(
+            conv_depth_wise(256 if self.input_size == 224 else 128, 256, 1),
+            conv_depth_wise(256, 512, 2),
             conv_depth_wise(512, 512, 1),
-            conv_depth_wise(512, 1024, 2),
-            conv_depth_wise(1024, 1024, 1),
             nn.AdaptiveAvgPool2d(1)
         )
 
         self.task3_conv = nn.Sequential(
+            conv_depth_wise(256 if self.input_size == 224 else 128, 256, 1),
+            conv_depth_wise(256, 512, 2),
             conv_depth_wise(512, 512, 1),
-            conv_depth_wise(512, 1024, 2),
-            conv_depth_wise(1024, 1024, 1),
             nn.AdaptiveAvgPool2d(1)
         )
 
-        # Task-specific fully connected layers
-        self.fc1 = nn.Linear(1024, n_classes_task1)
-        self.fc2 = nn.Linear(1024, n_classes_task2)
-        self.fc3 = nn.Linear(1024, n_classes_task3)
+        # Task-specific fully connected layers with reduced input size
+        self.fc1 = nn.Linear(512, n_classes_task1)
+        self.fc2 = nn.Linear(512, n_classes_task2)
+        self.fc3 = nn.Linear(512, n_classes_task3)
 
     def apply_attention(self, x):
         bs, c, h, w = x.shape
@@ -114,9 +111,9 @@ class AttentionMobileNetShallow_s_three_task(nn.Module):
         x3 = self.task3_conv(x)
 
         # Reshape and apply task-specific FC layers
-        x1 = x1.view(-1, 1024)
-        x2 = x2.view(-1, 1024)
-        x3 = x3.view(-1, 1024)
+        x1 = x1.view(-1, 512)
+        x2 = x2.view(-1, 512)
+        x3 = x3.view(-1, 512)
 
         out1 = self.fc1(x1)
         out2 = self.fc2(x2)
