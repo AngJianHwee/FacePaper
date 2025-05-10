@@ -22,7 +22,7 @@ TASK_CONFIGS = {
         'num_epochs': 80,   # Example: standard epochs for disease
     },
     'gender': {
-        'num_epochs': 40,   # Example: fewer epochs for gender
+        'num_epochs': 80,   # Example: fewer epochs for gender
     }
 }
 
