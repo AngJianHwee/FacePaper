@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from dataloaders.get_face_dataloaders import get_face_dataloaders
-from models.ours.AttentionMobileNetShallow_s_three_task import AttentionMobileNetShallow_s_three_task
+from models.ours.AttentionMobileNetShallow_xs_three_task import AttentionMobileNetShallow_xs_three_task
 from utils.optimizers import get_optimizer
 from utils.loss import CrossEntropyLoss
 import logging
@@ -299,7 +299,7 @@ def main():
     n_classes_disease = len(train_dataset.label_mappings['disease'])
     
     # Initialize model
-    model = AttentionMobileNetShallow_s_three_task(
+    model = AttentionMobileNetShallow_xs_three_task(
         input_channels=3,
         n_classes_task1=n_classes_age,
         n_classes_task2=n_classes_gender,
@@ -307,7 +307,7 @@ def main():
         input_size=32,
         use_attention=True
     ).to(device)
-    print(f"Model: AttentionMobileNetShallow_s_three_task")
+    print(f"Model: AttentionMobileNetShallow_xs_three_task")
     
     
     # Initialize optimizer and criterion
