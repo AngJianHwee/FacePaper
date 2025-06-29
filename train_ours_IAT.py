@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from dataloaders.get_face_dataloaders import get_face_dataloaders, get_face_dataloaders_subj_id
-from models.ours.AttentionMobileNetShallow_s_three_task_IAT import AttentionMobileNetShallow_s_three_task
+from models.ours.AttentionMobileNetShallow_s_three_task_IAT import AttentionMobileNetShallow_s_three_task_IAT
 from utils.optimizers import get_optimizer
 from utils.loss import CrossEntropyLoss
 import logging
@@ -433,7 +433,7 @@ def main():
     n_classes_subject_stage1 = len(train_dataset_stage1.label_mappings['subject'])
     
     # Initialize model for Phase 1 (grad_reverse=0)
-    model_stage1 = AttentionMobileNetShallow_s_three_task(
+    model_stage1 = AttentionMobileNetShallow_s_three_task_IAT(
         input_channels=3,
         n_classes_task1=n_classes_age_stage1,
         n_classes_task2=n_classes_gender_stage1,
@@ -443,7 +443,7 @@ def main():
         grad_reverse=0, # No adversarial training in Phase 1
         num_subjects=n_classes_subject_stage1
     ).to(device)
-    print(f"Model for Phase 1: AttentionMobileNetShallow_s_three_task (grad_reverse=0)")
+    print(f"Model for Phase 1: AttentionMobileNetShallow_s_three_task_IAT (grad_reverse=0)")
     
     # Initialize optimizer and criterion for Phase 1
     optimizer_stage1 = get_optimizer(model_stage1.parameters(), name='adam', lr=0.001, weight_decay=1e-4)
@@ -507,7 +507,7 @@ def main():
     logging.info("\n--- Phase 2: Fine-tuning (with subject adversarial training) ---")
 
     # Load the best model from Phase 1
-    model_finetune = AttentionMobileNetShallow_s_three_task(
+    model_finetune = AttentionMobileNetShallow_s_three_task_IAT(
         input_channels=3,
         n_classes_task1=n_classes_age_stage1,
         n_classes_task2=n_classes_gender_stage1,
@@ -518,7 +518,7 @@ def main():
         num_subjects=n_classes_subject_stage1
     ).to(device)
     model_finetune.load_state_dict(torch.load(best_model_path_stage1))
-    print(f"Model for Phase 2: AttentionMobileNetShallow_s_three_task (grad_reverse=1.0), loaded from {best_model_path_stage1}")
+    print(f"Model for Phase 2: AttentionMobileNetShallow_s_three_task_IAT (grad_reverse=1.0), loaded from {best_model_path_stage1}")
 
     # Initialize optimizer and criteria for Phase 2
     optimizer_finetune = get_optimizer(model_finetune.parameters(), name='adam', lr=0.0001, weight_decay=1e-4) # Smaller LR for fine-tuning
