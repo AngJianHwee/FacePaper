@@ -17,7 +17,7 @@ def get_unique_suffix():
     # Get current timestamp and UUID
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     unique_id = str(uuid.uuid4())[:8]  # Get first 8 characters of UUID
-    return f"{timestamp}_{unique_id}_IAT_0.05_15ep"
+    return f"{timestamp}_{unique_id}_IAT_0.0_15ep"
 
 def train_epoch(model, train_loader, optimizer, criterion, device, current_epoch, total_epochs):
     model.train()
@@ -281,7 +281,7 @@ def main():
     # Initialize IAT model with the base model
     model = AttentionMobileNetShallow_s_three_task_IAT(
         existing_model=base_model,
-        grad_reverse=0.05, # Example value for grad_reverse
+        grad_reverse=0.0, # Example value for grad_reverse
         num_subjects=n_classes_subject
     ).to(device)
     print(f"Model: AttentionMobileNetShallow_s_three_task_IAT (Finetuning)")
