@@ -17,7 +17,7 @@ def get_unique_suffix():
     # Get current timestamp and UUID
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     unique_id = str(uuid.uuid4())[:8]  # Get first 8 characters of UUID
-    return f"{timestamp}_{unique_id}"
+    return f"{timestamp}_{unique_id}_IAT_0.1_10ep"
 
 def train_epoch(model, train_loader, optimizer, criterion, device, current_epoch, total_epochs):
     model.train()
