@@ -52,24 +52,18 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         # Get outputs and latent features from the base model
         # The base model's forward method already handles attention and returns latent if requested
         base_outputs = self.base_model(x, return_att_map=True, return_latent=True)
-        # print shape
-        for item in base_outputs:
-            if isinstance(item, torch.Tensor):
-                print(f"Item shape: {item.shape}")
-            # if item is a tuple, print each tensor's shape
-            elif isinstance(item, tuple):
-                for i, tensor in enumerate(item):
-                    if isinstance(tensor, torch.Tensor):
-                        print(f"Item {i} shape: {tensor.shape}")
-            else:
-                print(f"Item type: {type(item)}, value: {item}")
 
 
         # Unpack base_outputs based on what base_model returns
         # base_model returns (out1, out2, out3), att_map, x_att, latent
         (out1, out2, out3), att_map, x_att, latent = base_outputs
-
-        print(f"out1 shape: {out1.shape}, out2 shape: {out2.shape}, out3 shape: {out3.shape}, att_map shape: {att_map.shape if return_att_map else 'N/A'}, x_att shape: {x_att.shape if return_att_map else 'N/A'}, latent shape: {latent.shape if return_latent else 'N/A'}")
+        # Print shapes of outputs for debugging
+        print(f"out1 shape: {out1.shape}")
+        print(f"out2 shape: {out2.shape}")
+        print(f"out3 shape: {out3.shape}")
+        print(f"att_map shape: {att_map.shape if return_att_map else 'N/A'}")
+        print(f"x_att shape: {x_att.shape if return_att_map else 'N/A'}")
+        print(f"latent shape: {latent.shape if return_latent else 'N/A'}")
 
         ID_pred = None
         if not self.grad_reverse == 0 and self.ID_head is not None:
