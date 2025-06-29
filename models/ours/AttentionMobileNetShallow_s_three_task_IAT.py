@@ -53,11 +53,16 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         # The base model's forward method already handles attention and returns latent if requested
         base_outputs = self.base_model(x, return_att_map=True, return_latent=True)
         # print shape
-        for key, value in base_outputs.items():
-            if isinstance(value, torch.Tensor):
-                print(f"{key} shape: {value.shape}")
+        for item in base_outputs:
+            if isinstance(item, torch.Tensor):
+                print(f"Item shape: {item.shape}")
+            # if item is a tuple, print each tensor's shape
+            elif isinstance(item, tuple):
+                for i, tensor in enumerate(item):
+                    if isinstance(tensor, torch.Tensor):
+                        print(f"Item {i} shape: {tensor.shape}")
             else:
-                print(f"{key} type: {type(value)}")
+                print(f"Item type: {type(item)}, value: {item}")
 
 
         # Unpack base_outputs based on what base_model returns
