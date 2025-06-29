@@ -54,10 +54,10 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         base_outputs = self.base_model(x, return_att_map=True, return_latent=True)
         print(f"Base model outputs: {base_outputs}")
         # print for [0], [1], [2], [3] in base_outputs
-        print(f"Base model outputs details: {base_outputs[0]}, {base_outputs[1]}, {base_outputs[2]}, {base_outputs[3]}")
+        # print(f"Base model outputs details: {base_outputs[0]}, {base_outputs[1]}, {base_outputs[2]}, {base_outputs[3]}")
         # shape
         print(f"Base model outputs shapes: {[output.shape for output in base_outputs]}")
-        
+
 
         # Unpack base_outputs based on what base_model returns
         # base_model returns (out1, out2, out3), att_map, x_att, latent
