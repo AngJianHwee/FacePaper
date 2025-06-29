@@ -331,42 +331,42 @@ def main():
             print(f'[{i}/{num_epochs}] Saved best test model to {test_model_path}')
             logging.info(f'[{i}/{num_epochs}] Saved best test model to {test_model_path}')
     
-    print("\nTraining completed. Testing best model...") # Adjusted message
+    # print("\nTraining completed. Testing best model...") # Adjusted message
     
-    # Removed Test best validation model section
+    # # Removed Test best validation model section
     
-    # Test best test model
-    print("\nTesting best test model...")
-    test_model_path = f'best_model_test_{run_suffix}.pth'
-    model.load_state_dict(torch.load(test_model_path))
-    test_test_loss, test_test_acc, test_confusion_matrices, test_avg_inference_time = test(model, test_loader, criterion, device)
+    # # Test best test model
+    # print("\nTesting best test model...")
+    # test_model_path = f'best_model_test_{run_suffix}.pth'
+    # model.load_state_dict(torch.load(test_model_path))
+    # test_test_loss, test_test_acc, test_confusion_matrices, test_avg_inference_time = test(model, test_loader, criterion, device)
     
-    print('\nBest Test Model Test Results:')
-    print(f'Test Loss: {test_test_loss:.4f}')
-    print(f'Test Accuracy:')
-    print(f'Age: {test_test_acc["age_5"]:.2f}%')
-    print(f'Gender: {test_test_acc["gender"]:.2f}%')
-    print(f'Disease: {test_test_acc["disease"]:.2f}%')
-    print(f'Subject: {test_test_acc["subject"]:.2f}%') # Added subject
-    print(f'Average Inference Time: {test_avg_inference_time*1000:.2f} ms per batch')
+    # print('\nBest Test Model Test Results:')
+    # print(f'Test Loss: {test_test_loss:.4f}')
+    # print(f'Test Accuracy:')
+    # print(f'Age: {test_test_acc["age_5"]:.2f}%')
+    # print(f'Gender: {test_test_acc["gender"]:.2f}%')
+    # print(f'Disease: {test_test_acc["disease"]:.2f}%')
+    # print(f'Subject: {test_test_acc["subject"]:.2f}%') # Added subject
+    # print(f'Average Inference Time: {test_avg_inference_time*1000:.2f} ms per batch')
     
-    logging.info('\nBest Test Model Test Results:')
-    logging.info(f'Test Loss: {test_test_loss:.4f}')
-    logging.info(f'Test Accuracy:')
-    logging.info(f'Age: {test_test_acc["age_5"]:.2f}%')
-    logging.info(f'Gender: {test_test_acc["gender"]:.2f}%')
-    logging.info(f'Disease: {test_test_acc["disease"]:.2f}%')
-    logging.info(f'Subject: {test_test_acc["subject"]:.2f}%') # Added subject
-    logging.info(f'Average Inference Time: {test_avg_inference_time*1000:.2f} ms per batch')
+    # logging.info('\nBest Test Model Test Results:')
+    # logging.info(f'Test Loss: {test_test_loss:.4f}')
+    # logging.info(f'Test Accuracy:')
+    # logging.info(f'Age: {test_test_acc["age_5"]:.2f}%')
+    # logging.info(f'Gender: {test_test_acc["gender"]:.2f}%')
+    # logging.info(f'Disease: {test_test_acc["disease"]:.2f}%')
+    # logging.info(f'Subject: {test_test_acc["subject"]:.2f}%') # Added subject
+    # logging.info(f'Average Inference Time: {test_avg_inference_time*1000:.2f} ms per batch')
     
-    # Print confusion matrices for the best test model
-    print('\nConfusion Matrices for Best Test Model:')
-    for task in ['age_5', 'gender', 'disease', 'subject']: # Include subject
-        print(f'\n{task.upper()} Confusion Matrix:')
-        print(test_confusion_matrices[task])
+    # # Print confusion matrices for the best test model
+    # print('\nConfusion Matrices for Best Test Model:')
+    # for task in ['age_5', 'gender', 'disease', 'subject']: # Include subject
+    #     print(f'\n{task.upper()} Confusion Matrix:')
+    #     print(test_confusion_matrices[task])
         
-        logging.info(f'\n{task.upper()} Confusion Matrix (Best Test Model):')
-        logging.info(test_confusion_matrices[task])
+    #     logging.info(f'\n{task.upper()} Confusion Matrix (Best Test Model):')
+    #     logging.info(test_confusion_matrices[task])
     
     print(f"\nTraining and testing completed successfully! (Run ID: {run_suffix})")
 
