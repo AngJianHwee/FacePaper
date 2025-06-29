@@ -292,7 +292,7 @@ def main():
     criterion = CrossEntropyLoss()
     
     # Training loop
-    num_epochs = 80
+    num_epochs = 10
     # Removed best_val_loss as there is no validation set
     best_test_loss = float('inf')
     
