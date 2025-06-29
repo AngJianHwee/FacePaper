@@ -42,7 +42,8 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         if not self.grad_reverse == 0:
             self.ID_head = nn.Linear(512*8*8, num_subjects) # 身份识别的全连接层。
         else:
-            self.ID_head = None
+            self.ID_head = nn.Linear(512*8*8, num_subjects) # 身份识别的全连接层。
+
 
     # forward方法定义了数据从输入到输出的完整流程。
     # x: 输入图像数据。
@@ -80,6 +81,14 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
             # print(f"x_id shape: {x_id.shape}")
             ID_pred = self.ID_head(x_id)
             # print(f"ID_pred shape: {ID_pred.shape}")
+        # case where grad_reverse is 0, meaning training like normal
+        elif self.grad_reverse == 0 and self.ID_head is not None:
+            # No gradient reversal, just pass through the latent features
+            x_id = latent.view(-1, 512*8*8)
+            # print(f"x_id shape: {x_id.shape}")
+            ID_pred = self.ID_head(x_id)
+            # print(f"ID_pred shape: {ID_pred.shape}")
+
 
         # Construct the return tuple based on original IAT model's return logic
         if not self.grad_reverse == 0:
