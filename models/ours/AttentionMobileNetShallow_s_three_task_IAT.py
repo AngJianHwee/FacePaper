@@ -40,7 +40,7 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         # 如果启用了梯度反转（身份对抗学习），就添加一个用于身份识别的分类头。
         # 这个ID_head就是用来识别是谁的脸的。
         if not self.grad_reverse == 0:
-            self.ID_head = nn.Linear(1024, num_subjects) # 身份识别的全连接层。
+            self.ID_head = nn.Linear(512*8*8, num_subjects) # 身份识别的全连接层。
         else:
             self.ID_head = None
 
@@ -76,7 +76,7 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         ID_pred = None
         if not self.grad_reverse == 0 and self.ID_head is not None:
             # Apply gradient reversal to the latent features from the base model
-            x_id = GradReverse.apply(latent.view(-1, 1024), self.grad_reverse)
+            x_id = GradReverse.apply(latent.view(-1, 512*8*8), self.grad_reverse)
             print(f"x_id shape: {x_id.shape}")
             ID_pred = self.ID_head(x_id)
             print(f"ID_pred shape: {ID_pred.shape}")
