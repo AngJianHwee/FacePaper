@@ -58,12 +58,12 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         # base_model returns (out1, out2, out3), att_map, x_att, latent
         (out1, out2, out3), att_map, x_att, latent = base_outputs
         # Print shapes of outputs for debugging
-        print(f"out1 shape: {out1.shape}")
-        print(f"out2 shape: {out2.shape}")
-        print(f"out3 shape: {out3.shape}")
-        print(f"att_map shape: {att_map.shape}")
-        print(f"x_att shape: {x_att.shape}")
-        print(f"latent shape: {latent.shape}")
+        # print(f"out1 shape: {out1.shape}")
+        # print(f"out2 shape: {out2.shape}")
+        # print(f"out3 shape: {out3.shape}")
+        # print(f"att_map shape: {att_map.shape}")
+        # print(f"x_att shape: {x_att.shape}")
+        # print(f"latent shape: {latent.shape}")
         
         # out1 shape: torch.Size([32, 11])
         # out2 shape: torch.Size([32, 2])
@@ -77,9 +77,9 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         if not self.grad_reverse == 0 and self.ID_head is not None:
             # Apply gradient reversal to the latent features from the base model
             x_id = GradReverse.apply(latent.view(-1, 512*8*8), self.grad_reverse)
-            print(f"x_id shape: {x_id.shape}")
+            # print(f"x_id shape: {x_id.shape}")
             ID_pred = self.ID_head(x_id)
-            print(f"ID_pred shape: {ID_pred.shape}")
+            # print(f"ID_pred shape: {ID_pred.shape}")
 
         # Construct the return tuple based on original IAT model's return logic
         if not self.grad_reverse == 0:
