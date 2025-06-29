@@ -30,7 +30,7 @@ class GradReverse(Function):
 # 它是基于nn.Module的，nn.Module是PyTorch里所有神经网络模块的基类。
 class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
     # 模型的初始化函数，就像给模型搭骨架，设置好各种零件。
-    def __init__(self, existing_model: AttentionMobileNetShallow_s_three_task, grad_reverse=0, num_subjects=0):
+    def __init__(self, existing_model: AttentionMobileNetShallow_s_three_task, grad_reverse=0.0, num_subjects=0):
         # 调用父类nn.Module的初始化方法，这是必须的。
         super(AttentionMobileNetShallow_s_three_task_IAT, self).__init__()
         self.base_model = existing_model
