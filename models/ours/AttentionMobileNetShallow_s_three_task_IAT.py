@@ -94,6 +94,10 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         if not self.grad_reverse == 0:
             # Original IAT returns (out1, out2, out3, ID_pred)
             task_outputs = (out1, out2, out3, ID_pred)
+        elif self.ID_head is not None:
+            # If ID_head is present but grad_reverse is 0, return ID_pred as well
+            task_outputs = (out1, out2, out3, ID_pred)
+        # If no ID_head, just return the original outputs
         else:
             task_outputs = (out1, out2, out3)
 
