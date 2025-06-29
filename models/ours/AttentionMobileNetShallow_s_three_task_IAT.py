@@ -40,7 +40,7 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         # 如果启用了梯度反转（身份对抗学习），就添加一个用于身份识别的分类头。
         # 这个ID_head就是用来识别是谁的脸的。
         if not self.grad_reverse == 0:
-            self.ID_head = nn.Linear(64, num_subjects) # 身份识别的全连接层。
+            self.ID_head = nn.Linear(1024, num_subjects) # 身份识别的全连接层。
         else:
             self.ID_head = None
 
