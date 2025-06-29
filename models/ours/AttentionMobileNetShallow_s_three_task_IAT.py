@@ -61,9 +61,9 @@ class AttentionMobileNetShallow_s_three_task_IAT(nn.Module):
         print(f"out1 shape: {out1.shape}")
         print(f"out2 shape: {out2.shape}")
         print(f"out3 shape: {out3.shape}")
-        print(f"att_map shape: {att_map.shape if return_att_map else 'N/A'}")
-        print(f"x_att shape: {x_att.shape if return_att_map else 'N/A'}")
-        print(f"latent shape: {latent.shape if return_latent else 'N/A'}")
+        print(f"att_map shape: {att_map.shape}")
+        print(f"x_att shape: {x_att.shape}")
+        print(f"latent shape: {latent.shape}")
 
         ID_pred = None
         if not self.grad_reverse == 0 and self.ID_head is not None:
